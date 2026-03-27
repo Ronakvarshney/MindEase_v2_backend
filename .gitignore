@@ -1,0 +1,4 @@
+node_modules/
+app/core/config.js
+.env
+.env.example
