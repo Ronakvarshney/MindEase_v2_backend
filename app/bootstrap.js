@@ -5,6 +5,7 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const authRouter = require("./api/v1/routers/authRoute");
 const LLMRoute = require("./api/v1/routers/LLMRoute");
+const BookingRoute = require("./api/v1/routers/bookingRoute");
 
 
 const createApp = () => {
@@ -24,6 +25,7 @@ const createApp = () => {
 
   app.use('/api' , authRouter);
   app.use('/api/v1' , LLMRoute);
+  app.use('/api/v1' , BookingRoute);
 
   app.get("/health", (req, res) => {
     res.status(200).json({

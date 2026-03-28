@@ -1,14 +1,14 @@
+const { default: mongoose } = require("mongoose");
 const bookings = require("../../../models/bookings");
-const paitent = require("../../../models/paitent");
 const paitent = require("../../../models/paitent");
 const therapist = require("../../../models/therapist");
 
 class BookingController {
-  async createBooking(req, res) {
+  async createRequestedBooking(req, res) {
     try {
       const { fromdata, id } = req.body;
-      const userId = req.userId;
-      const role = req.userRole;
+      const userId = req.user.userId;
+      const role = req.user.role;
       if (!userId || !role) {
         return res.status(401).json({ message: "Unauthorized" });
       }
@@ -21,9 +21,22 @@ class BookingController {
         return res.status(403).json({ message: "Forbidden" });
       }
 
+      if (
+        !mongoose.Types.ObjectId.isValid(id) ||
+        !mongoose.Types.ObjectId.isValid(userId)
+      ) {
+        return res.status(500).json({
+          message: "Invalid therapist or paitent id",
+        });
+      }
+
       const exisitingBooking = await bookings.findOne({
-        $and: [{ paitent: userId }, { therapist: id }],
+        paitent: userId,
+        therapist: id,
+        status: { $in: ["pending", "confirmed"] },
+        scheduledAt: new Date(`${date}`),
       });
+
       if (exisitingBooking)
         return res.status(400).json({
           message: "Booking already exists with this therapist",
@@ -35,7 +48,7 @@ class BookingController {
         cause: cause,
         meetingMode: mode,
         contact: contact_info,
-        scheduledAt: new Date(`${date}T${meeting_time}`),
+        scheduledAt: new Date(`${date}`),
         status: "pending",
       });
 
@@ -51,6 +64,7 @@ class BookingController {
         booking: newBooking,
       });
     } catch (err) {
+      console.error(err);
       return res.status(500).json({ message: "Internal Server Error" });
     }
   }
@@ -181,29 +195,25 @@ class BookingController {
     }
   }
 
-
-  async getAllTherapists(req , res){
-    try{
+  async getAllTherapists(req, res) {
+    try {
       const therapists = await therapist.find();
-      if(!therapist){
+      if (!therapist) {
         return res.status(400).json({
-          message : "Therapists not exists."
-        })
+          message: "Therapists not exists.",
+        });
       }
 
       return res.status(201).json({
-        message : "All Therapists are:",
-        therapists
-      })
-    }
-    catch(error){
+        message: "All Therapists are:",
+        therapists,
+      });
+    } catch (error) {
       return res.status(500).json({
-        message : "Internal server error"
-      })
+        message: "Internal server error",
+      });
     }
   }
-
-  
 }
 
 module.exports = new BookingController();

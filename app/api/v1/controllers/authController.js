@@ -1,3 +1,4 @@
+const config = require("../../../core/config");
 const {
   sendResetPasswordEmail,
   sendVerificationEmail,
@@ -30,8 +31,8 @@ class AuthController {
           message: "Name , email , password and role are required",
         });
       }
-      
-      let user ;
+
+      let user;
       if (role === "therapist") {
         if (!specialization || !bio || !experience || !fees || !time || !day) {
           return res.status(400).json({
@@ -73,8 +74,7 @@ class AuthController {
           role,
         });
         user.emailverificationToken = token;
-        user.emailVerificationTokenExpiry =
-          Date.now() + 24 * 60 * 60 * 1000; // 24 hours expiry
+        user.emailVerificationTokenExpiry = Date.now() + 24 * 60 * 60 * 1000; // 24 hours expiry
 
         // sendmail logic here using token
         console.log("Verification token for email:", token);
@@ -85,7 +85,7 @@ class AuthController {
       return res.status(201).json({
         success: true,
         message: "User registered successfully",
-        user
+        user,
       });
     } catch (err) {
       console.error("Error in register controller:", err);
@@ -99,7 +99,6 @@ class AuthController {
   async login(req, res) {
     try {
       const { email, password, role } = req.body;
-      console.log(email, password, role);
 
       if (!["therapist", "patient", "admin"].includes(role)) {
         return res
@@ -146,8 +145,6 @@ class AuthController {
         const existingPaitent = await paitent
           .findOne({ email })
           .select("+password");
-
-        console.log(existingPaitent);
 
         if (!existingPaitent) {
           return res.status(401).json({
@@ -199,12 +196,10 @@ class AuthController {
         token = generateToken(payload);
       }
 
-      console.log(token);
-
       res.cookie("token", token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
+        secure: config.environment.NODE_ENV === "production",
+        sameSite: config.environment.NODE_ENV === "production" ? "none" : "lax",
         maxAge: 24 * 60 * 60 * 1000,
       });
 
@@ -228,10 +223,11 @@ class AuthController {
 
   async logout(req, res) {
     try {
+      // lax allow two diff ports.
       res.clearCookie("token", {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
+        secure: config.environment.NODE_ENV === "production",
+        sameSite: config.environment.NODE_ENV === "production" ? "none" : "lax",
       });
       return res.status(200).json({
         success: true,
@@ -251,7 +247,7 @@ class AuthController {
       console.log("verification");
       const { token, role } = req.params;
       console.log("token->", token);
-      console.log("role", role)
+      console.log("role", role);
       if (!token || !role) {
         return res.status(400).json({
           success: false,
@@ -288,9 +284,9 @@ class AuthController {
           });
         }
 
-        exisitingTherapist.emailVerified = true ;
-        exisitingTherapist.emailVerificationToken = undefined ;
-        exisitingTherapist.emailVerificationTokenExpiry = undefined ;
+        exisitingTherapist.emailVerified = true;
+        exisitingTherapist.emailVerificationToken = undefined;
+        exisitingTherapist.emailVerificationTokenExpiry = undefined;
         await exisitingTherapist.save();
       }
 
