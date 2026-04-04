@@ -17,12 +17,7 @@ const protect = (req, res, next) => {
         message: "Unauthorized access - Invalid token",
       });
     }
-
-    req.user = {
-      userId: decoded.userId,
-      role: decoded.role,
-      email: decoded.email,
-    };
+    req.user = decoded ;
     next();
   } catch (err) {
     console.error("Error in auth middleware:", err);

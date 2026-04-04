@@ -2,6 +2,7 @@ const { default: mongoose } = require("mongoose");
 const bookings = require("../../../models/bookings");
 const paitent = require("../../../models/paitent");
 const therapist = require("../../../models/therapist");
+const { transporter } = require("../../../db/nodemailer");
 
 class BookingController {
   async createRequestedBooking(req, res) {
@@ -71,15 +72,16 @@ class BookingController {
 
   async getBookings(req, res) {
     try {
-      const userId = req.userId;
-      const role = req.userRole;
-      if (role !== "paitent") {
+      const userId = req.user.userId;
+      const role = req.user.role;
+      if (role !== "patient") {
         return res.status(403).json({ message: "Forbidden" });
       }
       const bookingsList = await bookings
         .find({ paitent: userId })
         .populate("therapist");
       return res.status(200).json({
+        success: true,
         message: "Bookings retrieved successfully",
         bookings: bookingsList,
       });
@@ -90,13 +92,14 @@ class BookingController {
 
   async getAllBookings(req, res) {
     try {
-      const bookings = await bookings
+      const booking = await bookings
         .find()
         .populate("paitent", "username email")
         .populate("therapist");
       return res.status(200).json({
+        success: true,
         message: "All bookings retrieved successfully",
-        bookings: bookings,
+        bookings: booking,
       });
     } catch (err) {
       return res.status(500).json({ message: "Internal Server Error" });
@@ -105,8 +108,7 @@ class BookingController {
 
   async updateBookingStatus(req, res) {
     try {
-      const userId = req.userId;
-      const role = req.userRole;
+      const role = req.user.role;
       if (role !== "therapist") {
         return res.status(403).json({ message: "Forbidden" });
       }
@@ -127,19 +129,17 @@ class BookingController {
         return res.status(404).json({ message: "Booking not found" });
       }
 
-      if (status == "confirmed") {
-        const paitent = await paitent.findById(userId);
-        if (!paitent) {
+      if (status === "confirmed") {
+        const paitentId = exisitingBooking.paitent;
+        const paitentdata = await paitent.findById(paitentId);
+        if (!paitentdata) {
           return res.status(404).json({ message: "Paitent not found" });
         }
 
-        paitent.bookings.push(exisitingBooking._id);
-        await paitent.save();
-        await sendEmail(
-          paitent.email,
-          "Booking Confirmed",
-          `Your booking with therapist ${exisitingBooking.therapist} has been confirmed for ${exisitingBooking.scheduledAt}`,
-        );
+        paitentdata.bookings.push(exisitingBooking._id);
+        await paitentdata.save();
+      } else if (status === "cancelled") {
+        await bookings.findByIdAndDelete(id);
       }
 
       exisitingBooking.status = status;
@@ -149,7 +149,9 @@ class BookingController {
         booking: exisitingBooking,
       });
     } catch (err) {
-      return res.status(500).json({ message: "Internal Server Error" });
+      return res
+        .status(500)
+        .json({ message: "Internal Server Error", error: err.message });
     }
   }
 
