@@ -1,10 +1,14 @@
 const InitializeApp = require("./bootstrap");
+const InitializeWS = require("./services/websocket.service");
 const config = require("./core/config");
+const http = require("http");
 
 const startServer = async () => {
   try {
     const app = await InitializeApp();
-    app.listen(config.port, () => {
+    const server = http.createServer(app);
+    InitializeWS(server);
+    server.listen(config.port, () => {
       console.log(`Server is running on port ${config.port}`);
     });
   } catch (err) {
